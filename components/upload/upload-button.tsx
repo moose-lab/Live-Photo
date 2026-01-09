@@ -22,7 +22,7 @@ export function UploadButton({ onFileSelect, disabled }: UploadButtonProps) {
         type="file"
         id="video-upload"
         className="hidden"
-        accept="video/mp4,video/quicktime,video/webm,image/heic,image/heif,.heic,.heif"
+        accept="video/mp4,video/quicktime,video/webm"
         onChange={handleFileChange}
         disabled={disabled}
       />

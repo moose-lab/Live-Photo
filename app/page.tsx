@@ -2,47 +2,40 @@
 
 import { useState } from 'react'
 import { UploadButton } from '@/components/upload/upload-button'
-import { UploadProgress } from '@/components/upload/upload-progress'
-import { CoverPreview } from '@/components/preview/cover-preview'
-import { ResultActions } from '@/components/result/result-actions'
 import { FirstFramePreview } from '@/components/preview/first-frame-preview'
-import { useUploadStore } from '@/lib/store'
 import { extractFirstFrame, isHeicFile, type VideoMetadata } from '@/lib/video-utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 export default function Home() {
-  const { progress, status, videoId, errorMessage, setProgress, setStatus, setVideoId, setError, reset } = useUploadStore()
-  const [coverUrl, setCoverUrl] = useState<string | null>(null)
-  const [processedVideoUrl, setProcessedVideoUrl] = useState<string | null>(null)
-  const [isRevealing, setIsRevealing] = useState(false)
-
   // Local frame extraction state
   const [extractedFrame, setExtractedFrame] = useState<string | null>(null)
   const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isExtracting, setIsExtracting] = useState(false)
+  const [extractError, setExtractError] = useState<string | null>(null)
 
   // Stylization state
   const [isStylizing, setIsStylizing] = useState(false)
-  const [stylizeRequestId, setStylizeRequestId] = useState<string | null>(null)
   const [stylizeProgress, setStylizeProgress] = useState(0)
   const [doodleCoverUrl, setDoodleCoverUrl] = useState<string | null>(null)
 
   const handleFileSelect = async (file: File) => {
     try {
-      reset()
+      // Reset state
       setExtractedFrame(null)
       setVideoMetadata(null)
+      setDoodleCoverUrl(null)
+      setExtractError(null)
       setSelectedFile(file)
 
-      // HEIC files: skip client-side extraction, go straight to server processing
+      // HEIC files: Not supported for client-side extraction
       if (isHeicFile(file)) {
-        console.log('HEIC file detected - server-side processing required')
-        await handleUpload(file)
+        setExtractError('HEIC/HEIF files are not supported. Please convert to MP4 or MOV format first.')
         return
       }
 
-      // Standard video files: extract frame locally first
+      // Standard video files: extract frame locally
       setIsExtracting(true)
 
       // Extract first frame locally - show immediately in left preview
@@ -50,91 +43,21 @@ export default function Home() {
       setExtractedFrame(result.frameDataUrl)
       setVideoMetadata(result.metadata)
       setIsExtracting(false)
-
-      // Auto-proceed to upload and AI processing for right preview
-      await handleUpload(file)
     } catch (error) {
       console.error('File select error:', error)
-      setError(error instanceof Error ? error.message : 'Failed to process file')
+      setExtractError(error instanceof Error ? error.message : 'Failed to extract frame from video')
       setIsExtracting(false)
     }
   }
 
-  const handleUpload = async (file: File) => {
-    try {
-      setStatus('uploading')
-      // Keep extractedFrame visible during upload
-
-      // Create form data
-      const formData = new FormData()
-      formData.append('video', file)
-
-      // Upload file
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!uploadResponse.ok) {
-        const error = await uploadResponse.json()
-        throw new Error(error.error || 'Upload failed')
-      }
-
-      const uploadData = await uploadResponse.json()
-      setVideoId(uploadData.videoId)
-      setProgress(30)
-
-      // Trigger processing
-      setStatus('processing')
-      const generateResponse = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoId: uploadData.videoId }),
-      })
-
-      if (!generateResponse.ok) {
-        throw new Error('Failed to start processing')
-      }
-
-      // Connect to SSE for status updates
-      const eventSource = new EventSource(`/api/status/${uploadData.videoId}`)
-
-      eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data)
-
-        if (data.error) {
-          setError(data.error)
-          eventSource.close()
-          return
-        }
-
-        setProgress(data.progress)
-        setStatus(data.status)
-
-        if (data.coverUrl) {
-          // Trigger progressive reveal animation
-          setIsRevealing(true)
-          setTimeout(() => {
-            setCoverUrl(data.coverUrl)
-            setProcessedVideoUrl(data.processedVideoUrl || null)
-            setIsRevealing(false)
-          }, 2000) // 2 second blur-to-clear transition
-        }
-
-        if (data.status === 'completed' || data.status === 'failed') {
-          eventSource.close()
-        }
-      }
-
-      eventSource.onerror = () => {
-        setError('Connection lost')
-        eventSource.close()
-      }
-
-    } catch (error) {
-      console.error('Upload error:', error)
-      setError(error instanceof Error ? error.message : 'Upload failed')
-    }
+  const handleReset = () => {
+    setExtractedFrame(null)
+    setVideoMetadata(null)
+    setDoodleCoverUrl(null)
+    setExtractError(null)
+    setSelectedFile(null)
+    setIsStylizing(false)
+    setStylizeProgress(0)
   }
 
   const handleStylize = async () => {
@@ -163,7 +86,6 @@ export default function Home() {
       }
 
       const { requestId } = await response.json()
-      setStylizeRequestId(requestId)
 
       // Poll for result
       const pollInterval = setInterval(async () => {
@@ -224,21 +146,21 @@ export default function Home() {
               ✨ Live-Photo
             </h1>
             <p className="text-xl text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
-              Transform your live videos with AI-generated <span className="font-semibold text-purple-600">doodle-style</span> cover frames.
-              Get eye-catching videos ready to post! 🎨📱
+              Transform your video frames with AI-generated <span className="font-semibold text-purple-600">doodle-style</span> covers.
+              Get eye-catching cover art ready to post! 🎨📱
             </p>
             <p className="text-sm text-purple-600 font-medium">
-              ✓ iOS Live Photos (HEIC) Supported
+              ✓ Powered by nano-banana-pro AI
             </p>
           </div>
 
           {/* Upload Section */}
-          {!extractedFrame && !isExtracting && status === 'idle' && (
+          {!extractedFrame && !isExtracting && (
             <Card>
               <CardHeader>
                 <CardTitle>Upload Your Video</CardTitle>
                 <CardDescription>
-                  Supported formats: MP4, MOV, WebM, HEIC (iOS Live Photos) - max 500MB. Cover will match your video's aspect ratio automatically.
+                  Supported formats: MP4, MOV, WebM - max 500MB. AI will match your video's aspect ratio automatically.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center py-8">
@@ -247,6 +169,13 @@ export default function Home() {
                   disabled={false}
                 />
               </CardContent>
+              {extractError && (
+                <CardContent>
+                  <div className="text-center text-red-600 text-sm">
+                    {extractError}
+                  </div>
+                </CardContent>
+              )}
             </Card>
           )}
 
@@ -258,28 +187,6 @@ export default function Home() {
                   <div className="text-5xl animate-spin">🎨</div>
                   <p className="text-lg font-semibold">Extracting first frame...</p>
                   <p className="text-sm text-muted-foreground">This will only take a moment</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* HEIC Processing State */}
-          {!extractedFrame && selectedFile && isHeicFile(selectedFile) && (status === 'uploading' || status === 'processing') && (
-            <Card className="border-2 border-purple-300">
-              <CardContent className="py-12">
-                <div className="text-center space-y-4">
-                  <div className="text-6xl animate-bounce">📱</div>
-                  <p className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                    Processing iOS Live Photo (HEIC)
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Server is extracting frame and converting to doodle style...
-                  </p>
-                  <UploadProgress
-                    progress={progress}
-                    status={status}
-                    errorMessage={errorMessage}
-                  />
                 </div>
               </CardContent>
             </Card>
@@ -372,46 +279,28 @@ export default function Home() {
           )}
 
 
-          {/* Preview Section */}
-          {coverUrl && status === 'completed' && (
-            <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                ✨ Your Doodle Live Video is Ready!
-              </h2>
-
-              {/* Video Player with Cover Preview */}
-              <Card className="overflow-hidden">
-                <CardContent className="p-0">
-                  {processedVideoUrl ? (
-                    <div className="relative aspect-video max-w-2xl mx-auto bg-black">
-                      <video
-                        src={processedVideoUrl}
-                        controls
-                        poster={coverUrl}
-                        className="w-full h-full"
-                        playsInline
-                      >
-                        Your browser does not support the video tag.
-                      </video>
-                      <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                        📱 Live Video with Doodle Cover
-                      </div>
-                    </div>
-                  ) : (
-                    <CoverPreview src={coverUrl} />
-                  )}
-                </CardContent>
-              </Card>
-
-              <ResultActions
-                coverUrl={coverUrl}
-                videoUrl={processedVideoUrl}
-                onReset={() => {
-                  reset()
-                  setCoverUrl(null)
-                  setProcessedVideoUrl(null)
+          {/* Action Buttons */}
+          {doodleCoverUrl && (
+            <div className="flex justify-center gap-4">
+              <Button
+                onClick={handleReset}
+                variant="outline"
+                size="lg"
+              >
+                Upload Another Video
+              </Button>
+              <Button
+                onClick={() => {
+                  const link = document.createElement('a')
+                  link.href = doodleCoverUrl
+                  link.download = 'doodle-cover.png'
+                  link.click()
                 }}
-              />
+                size="lg"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              >
+                Download Cover
+              </Button>
             </div>
           )}
 
@@ -421,12 +310,12 @@ export default function Home() {
               <CardTitle className="text-lg">How it works</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>1. 📱 Upload your live video (MP4, MOV, WebM, or HEIC from iOS)</p>
-              <p>2. 🎨 AI auto-detects video dimensions and extracts first frame</p>
-              <p>3. ✨ Creates doodle-style cover matching your video's aspect ratio</p>
-              <p>4. 🎬 Cover is embedded as opening frame in your video</p>
-              <p>5. 📥 Download processed video and share on 小红书/TikTok</p>
-              <p className="text-xs italic">✓ iOS Live Photos (HEIC) fully supported!</p>
+              <p>1. 📱 Upload your video (MP4, MOV, WebM - max 500MB)</p>
+              <p>2. 🎨 Browser extracts first frame locally (instant preview)</p>
+              <p>3. ✨ Click "开始Doodle转绘" to stylize with nano-banana-pro AI</p>
+              <p>4. 📥 Download your doodle-style cover image</p>
+              <p>5. 🎬 Use the cover for your videos on 小红书/TikTok/Instagram</p>
+              <p className="text-xs italic">✓ Powered by Wavespeed AI nano-banana-pro model</p>
             </CardContent>
           </Card>
         </div>
