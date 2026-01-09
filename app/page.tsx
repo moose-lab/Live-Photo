@@ -85,9 +85,19 @@ export default function Home() {
         throw new Error('Failed to submit stylization task')
       }
 
-      const { requestId } = await response.json()
+      const data = await response.json()
+      const { requestId, status, resultUrl } = data
 
-      // Poll for result
+      // Check if task completed immediately
+      if (status === 'completed' && resultUrl) {
+        console.log('Task completed immediately!')
+        setDoodleCoverUrl(resultUrl)
+        setStylizeProgress(100)
+        setIsStylizing(false)
+        return
+      }
+
+      // Task is pending/processing, start polling
       const pollInterval = setInterval(async () => {
         try {
           const resultResponse = await fetch(`/api/stylize/${requestId}`)

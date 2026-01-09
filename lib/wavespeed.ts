@@ -17,6 +17,8 @@ export interface StylizeTaskParams {
 export interface StylizeTaskResponse {
   requestId: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
+  resultUrl?: string  // If task completed immediately
+  error?: string      // If task failed immediately
 }
 
 export interface StylizeResultResponse {
@@ -41,6 +43,20 @@ export async function submitStylizeTask(
 
   const { imageUrl, resolution = '1k' } = params
 
+  const requestBody = {
+    enable_base64_output: false,
+    enable_sync_mode: false,
+    images: [imageUrl],
+    output_format: 'png',
+    prompt: DOODLE_PROMPT,
+    resolution,
+  }
+
+  console.log('Submitting to Wavespeed API:')
+  console.log('- Endpoint:', `${WAVESPEED_API_BASE}/google/nano-banana-pro/edit`)
+  console.log('- Image URL:', imageUrl)
+  console.log('- Request body:', JSON.stringify(requestBody, null, 2))
+
   try {
     const response = await fetch(
       `${WAVESPEED_API_BASE}/google/nano-banana-pro/edit`,
@@ -50,16 +66,11 @@ export async function submitStylizeTask(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${WAVESPEED_API_KEY}`,
         },
-        body: JSON.stringify({
-          enable_base64_output: false,
-          enable_sync_mode: false,
-          images: [imageUrl],
-          output_format: 'png',
-          prompt: DOODLE_PROMPT,
-          resolution,
-        }),
+        body: JSON.stringify(requestBody),
       }
     )
+
+    console.log('Wavespeed API response status:', response.status, response.statusText)
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
@@ -70,17 +81,62 @@ export async function submitStylizeTask(
 
     const data = await response.json()
 
-    // Extract requestId from response
-    // API typically returns: { request_id: "xxx" } or { id: "xxx" }
-    const requestId = data.request_id || data.id || data.requestId
+    // Log the full response for debugging
+    console.log('Wavespeed API full response:', JSON.stringify(data, null, 2))
+
+    // Wavespeed API returns nested response: { "data": { "id": "...", ... } }
+    let requestId: string | undefined
+
+    if (data.data && data.data.id) {
+      // Nested response format (actual Wavespeed format)
+      requestId = data.data.id
+    } else {
+      // Try other possible formats for fallback
+      requestId =
+        data.request_id ||
+        data.id ||
+        data.requestId ||
+        data.prediction_id ||
+        data.predictionId
+    }
 
     if (!requestId) {
-      throw new Error('No requestId returned from Wavespeed API')
+      console.error('No requestId found in response. Full data:', data)
+      console.error('Available top-level keys:', Object.keys(data))
+      if (data.data) {
+        console.error('Available data.data keys:', Object.keys(data.data))
+      }
+      throw new Error(`No requestId returned from Wavespeed API. Response structure: ${JSON.stringify(Object.keys(data))}`)
+    }
+
+    console.log('Extracted requestId:', requestId)
+
+    // Check if task completed immediately
+    let taskStatus: 'pending' | 'processing' | 'completed' | 'failed' = 'pending'
+    let resultUrl: string | undefined
+    let taskError: string | undefined
+
+    if (data.data) {
+      taskStatus = (data.data.status as 'pending' | 'processing' | 'completed' | 'failed') || 'pending'
+
+      // If already completed, extract the result URL
+      if (taskStatus === 'completed' && data.data.outputs && data.data.outputs.length > 0) {
+        resultUrl = data.data.outputs[0]
+        console.log('Task completed immediately! Result URL:', resultUrl)
+      }
+
+      // If failed, extract error
+      if (taskStatus === 'failed' && data.data.error) {
+        taskError = data.data.error
+        console.error('Task failed immediately:', taskError)
+      }
     }
 
     return {
       requestId,
-      status: 'pending',
+      status: taskStatus,
+      resultUrl,
+      error: taskError,
     }
   } catch (error) {
     console.error('Failed to submit stylization task:', error)
@@ -101,6 +157,8 @@ export async function getStylizeResult(
     throw new Error('WAVESPEED_API_KEY is not configured')
   }
 
+  console.log('Polling Wavespeed API result for requestId:', requestId)
+
   try {
     const response = await fetch(
       `${WAVESPEED_API_BASE}/predictions/${requestId}/result`,
@@ -112,21 +170,39 @@ export async function getStylizeResult(
       }
     )
 
+    console.log('Wavespeed result API status:', response.status)
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      console.error('Wavespeed result API error:', errorData)
       throw new Error(
         `Wavespeed API error: ${response.status} ${JSON.stringify(errorData)}`
       )
     }
 
     const data = await response.json()
+    console.log('Wavespeed result API response:', JSON.stringify(data, null, 2))
 
-    // Parse response based on Wavespeed API structure
-    // Typically: { status: "completed", output: ["url1"], ... }
-    const status = data.status || 'processing'
-    const output = data.output || data.outputs || []
-    const resultUrl = Array.isArray(output) ? output[0] : output
-    const error = data.error
+    // Wavespeed API returns nested response: { "data": { "status": "...", "outputs": [...], ... } }
+    let status: 'pending' | 'processing' | 'completed' | 'failed'
+    let resultUrl: string | undefined
+    let error: string | undefined
+
+    if (data.data) {
+      // Nested response format (actual Wavespeed format)
+      status = (data.data.status as 'pending' | 'processing' | 'completed' | 'failed') || 'processing'
+      const outputs = data.data.outputs || []
+      resultUrl = Array.isArray(outputs) && outputs.length > 0 ? outputs[0] : undefined
+      error = data.data.error || undefined
+    } else {
+      // Fallback for non-nested format
+      status = (data.status as 'pending' | 'processing' | 'completed' | 'failed') || 'processing'
+      const output = data.output || data.outputs || []
+      resultUrl = Array.isArray(output) ? output[0] : output
+      error = data.error
+    }
+
+    console.log('Parsed result - status:', status, 'resultUrl:', resultUrl)
 
     return {
       status,
