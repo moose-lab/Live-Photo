@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import { UploadButton } from '@/components/upload/upload-button'
 import { FirstFramePreview } from '@/components/preview/first-frame-preview'
-import { extractFirstFrame, isHeicFile, type VideoMetadata } from '@/lib/video-utils'
+import { extractFirstFrame, isHeicFile, composeVideoWithDoodleCover, type VideoMetadata } from '@/lib/video-utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
 
 export default function Home() {
   // Local frame extraction state
@@ -19,6 +20,11 @@ export default function Home() {
   const [isStylizing, setIsStylizing] = useState(false)
   const [stylizeProgress, setStylizeProgress] = useState(0)
   const [doodleCoverUrl, setDoodleCoverUrl] = useState<string | null>(null)
+
+  // Video composition state
+  const [isComposing, setIsComposing] = useState(false)
+  const [composeProgress, setComposeProgress] = useState(0)
+  const [composedVideoUrl, setComposedVideoUrl] = useState<string | null>(null)
 
   const handleFileSelect = async (file: File) => {
     try {
@@ -58,6 +64,43 @@ export default function Home() {
     setSelectedFile(null)
     setIsStylizing(false)
     setStylizeProgress(0)
+    setIsComposing(false)
+    setComposeProgress(0)
+    if (composedVideoUrl) {
+      URL.revokeObjectURL(composedVideoUrl)
+    }
+    setComposedVideoUrl(null)
+  }
+
+  const handleComposeVideo = async () => {
+    if (!selectedFile || !doodleCoverUrl) {
+      alert('需要原始视频和涂鸦封面')
+      return
+    }
+
+    try {
+      setIsComposing(true)
+      setComposeProgress(0)
+
+      // Compose video with doodle cover
+      const composedBlob = await composeVideoWithDoodleCover(
+        selectedFile,
+        doodleCoverUrl,
+        1.5, // 1.5 seconds cover duration
+        (progress) => {
+          setComposeProgress(progress)
+        }
+      )
+
+      // Create download URL
+      const url = URL.createObjectURL(composedBlob)
+      setComposedVideoUrl(url)
+      setIsComposing(false)
+    } catch (error) {
+      console.error('Video composition error:', error)
+      setIsComposing(false)
+      alert(error instanceof Error ? error.message : '视频合成失败')
+    }
   }
 
   const handleStylize = async () => {
@@ -290,27 +333,121 @@ export default function Home() {
 
 
           {/* Action Buttons */}
-          {doodleCoverUrl && (
-            <div className="flex justify-center gap-4">
+          {doodleCoverUrl && !isComposing && !composedVideoUrl && (
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex gap-4">
+                <Button
+                  onClick={handleReset}
+                  variant="outline"
+                  size="lg"
+                >
+                  Upload Another Video
+                </Button>
+                <Button
+                  onClick={() => {
+                    const link = document.createElement('a')
+                    link.href = doodleCoverUrl
+                    link.download = 'doodle-cover.png'
+                    link.click()
+                  }}
+                  size="lg"
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                >
+                  Download Cover
+                </Button>
+              </div>
               <Button
-                onClick={handleReset}
-                variant="outline"
+                onClick={handleComposeVideo}
                 size="lg"
+                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
               >
-                Upload Another Video
+                🎬 合成视频（封面+实况）
               </Button>
-              <Button
-                onClick={() => {
-                  const link = document.createElement('a')
-                  link.href = doodleCoverUrl
-                  link.download = 'doodle-cover.png'
-                  link.click()
-                }}
-                size="lg"
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-              >
-                Download Cover
-              </Button>
+              <p className="text-sm text-muted-foreground text-center">
+                将涂鸦封面合成到视频开头，创建封面到实况的过渡效果
+              </p>
+            </div>
+          )}
+
+          {/* Video Composition Progress */}
+          {isComposing && (
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center space-y-4">
+                  <div className="text-6xl animate-bounce">🎬</div>
+                  <p className="text-xl font-semibold">正在合成视频...</p>
+                  <div className="w-full max-w-md mx-auto space-y-2">
+                    <Progress value={composeProgress} />
+                    <p className="text-sm text-muted-foreground">
+                      {composeProgress < 30 && '加载资源...'}
+                      {composeProgress >= 30 && composeProgress < 50 && '添加涂鸦封面...'}
+                      {composeProgress >= 50 && composeProgress < 60 && '创建过渡效果...'}
+                      {composeProgress >= 60 && '合成视频中...'}
+                      {` ${Math.round(composeProgress)}%`}
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    这可能需要几分钟，取决于视频长度和您的设备性能
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Composed Video Preview */}
+          {composedVideoUrl && (
+            <div className="space-y-6">
+              <h2 className="text-3xl font-bold text-center bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                ✨ 合成视频已完成！
+              </h2>
+
+              <Card className="overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="relative aspect-video max-w-2xl mx-auto bg-black">
+                    <video
+                      src={composedVideoUrl}
+                      controls
+                      className="w-full h-full"
+                      playsInline
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                    <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                      🎨 涂鸦封面 → 📱 实况视频
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-center gap-4">
+                <Button
+                  onClick={handleReset}
+                  variant="outline"
+                  size="lg"
+                >
+                  重新开始
+                </Button>
+                <Button
+                  onClick={() => {
+                    const link = document.createElement('a')
+                    link.href = composedVideoUrl
+                    link.download = `doodle-live-video-${Date.now()}.webm`
+                    link.click()
+                  }}
+                  size="lg"
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                >
+                  📥 下载合成视频
+                </Button>
+              </div>
+
+              <Card className="border-dashed border-orange-300">
+                <CardContent className="py-4">
+                  <p className="text-sm text-center text-muted-foreground">
+                    💡 提示：视频格式为 WebM。如需其他格式，可使用视频转换工具（如 CloudConvert）转换为 MP4。
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -323,9 +460,11 @@ export default function Home() {
               <p>1. 📱 Upload your video (MP4, MOV, WebM - max 500MB)</p>
               <p>2. 🎨 Browser extracts first frame locally (instant preview)</p>
               <p>3. ✨ Click "开始Doodle转绘" to stylize with nano-banana-pro AI</p>
-              <p>4. 📥 Download your doodle-style cover image</p>
-              <p>5. 🎬 Use the cover for your videos on 小红书/TikTok/Instagram</p>
-              <p className="text-xs italic">✓ Powered by Wavespeed AI nano-banana-pro model</p>
+              <p>4. 📥 Download doodle-style cover OR 🎬 compose video</p>
+              <p>5. 🎥 Composed video starts with doodle cover → transitions to live footage</p>
+              <p>6. 📱 Share on 小红书/TikTok/Instagram with eye-catching opening</p>
+              <p className="text-xs italic mt-2">✓ Powered by Wavespeed AI nano-banana-pro model</p>
+              <p className="text-xs italic">✓ Video composition runs locally in your browser (free & private)</p>
             </CardContent>
           </Card>
         </div>

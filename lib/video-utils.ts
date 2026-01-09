@@ -166,3 +166,182 @@ export function formatDuration(seconds: number): string {
   const secs = Math.floor(seconds % 60)
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
+
+/**
+ * Compose video with doodle cover as first frame
+ * Creates a video that starts with doodle cover and transitions to original video
+ *
+ * @param videoFile - Original video file
+ * @param doodleCoverUrl - URL of the doodle-style cover image
+ * @param coverDuration - Duration to display cover in seconds (default: 1.5s)
+ * @param onProgress - Progress callback (0-100)
+ * @returns Promise with composed video blob
+ */
+export async function composeVideoWithDoodleCover(
+  videoFile: File,
+  doodleCoverUrl: string,
+  coverDuration: number = 1.5,
+  onProgress?: (progress: number) => void
+): Promise<Blob> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      onProgress?.(5)
+
+      // Load doodle cover image
+      const coverImage = await loadImage(doodleCoverUrl)
+      onProgress?.(10)
+
+      // Create video element for original video
+      const video = document.createElement('video')
+      video.src = URL.createObjectURL(videoFile)
+      video.muted = true
+      video.playsInline = true
+
+      // Wait for video to load
+      await new Promise<void>((resolveLoad, rejectLoad) => {
+        video.addEventListener('loadeddata', () => resolveLoad(), { once: true })
+        video.addEventListener('error', () => rejectLoad(new Error('Failed to load video')), { once: true })
+      })
+
+      onProgress?.(20)
+
+      const width = video.videoWidth
+      const height = video.videoHeight
+      const fps = 30 // Target 30 FPS
+
+      // Create canvas for composition
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+
+      if (!ctx) {
+        throw new Error('Could not get canvas context')
+      }
+
+      // Create MediaRecorder for output
+      const stream = canvas.captureStream(fps)
+      const recorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp9',
+        videoBitsPerSecond: 5000000, // 5 Mbps for good quality
+      })
+
+      const chunks: Blob[] = []
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data)
+        }
+      }
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' })
+        URL.revokeObjectURL(video.src)
+        onProgress?.(100)
+        resolve(blob)
+      }
+
+      recorder.onerror = (e) => {
+        URL.revokeObjectURL(video.src)
+        reject(new Error('Recording failed'))
+      }
+
+      // Start recording
+      recorder.start()
+      onProgress?.(30)
+
+      // Phase 1: Display doodle cover for specified duration
+      const coverFrames = Math.floor(coverDuration * fps)
+      for (let i = 0; i < coverFrames; i++) {
+        // Draw doodle cover
+        ctx.clearRect(0, 0, width, height)
+        ctx.drawImage(coverImage, 0, 0, width, height)
+
+        // Optional: Add fade-in effect for first few frames
+        if (i < fps * 0.3) {
+          const alpha = i / (fps * 0.3)
+          ctx.globalAlpha = alpha
+          ctx.drawImage(coverImage, 0, 0, width, height)
+          ctx.globalAlpha = 1.0
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000 / fps))
+
+        // Update progress during cover phase (30-50%)
+        const coverProgress = 30 + (i / coverFrames) * 20
+        onProgress?.(coverProgress)
+      }
+
+      onProgress?.(50)
+
+      // Phase 2: Transition from cover to video
+      const transitionDuration = 0.5 // 0.5 second transition
+      const transitionFrames = Math.floor(transitionDuration * fps)
+
+      video.currentTime = 0
+      await new Promise<void>(resolve => {
+        video.addEventListener('seeked', () => resolve(), { once: true })
+      })
+
+      for (let i = 0; i < transitionFrames; i++) {
+        const alpha = i / transitionFrames
+
+        // Draw doodle cover
+        ctx.clearRect(0, 0, width, height)
+        ctx.drawImage(coverImage, 0, 0, width, height)
+
+        // Fade in video on top
+        ctx.globalAlpha = alpha
+        ctx.drawImage(video, 0, 0, width, height)
+        ctx.globalAlpha = 1.0
+
+        await new Promise(resolve => setTimeout(resolve, 1000 / fps))
+
+        // Update progress during transition (50-60%)
+        const transitionProgress = 50 + (i / transitionFrames) * 10
+        onProgress?.(transitionProgress)
+      }
+
+      onProgress?.(60)
+
+      // Phase 3: Play through the rest of the original video
+      video.play()
+
+      const captureFrame = async () => {
+        if (video.ended || video.paused) {
+          recorder.stop()
+          return
+        }
+
+        ctx.drawImage(video, 0, 0, width, height)
+
+        // Update progress during video playback (60-95%)
+        const videoProgress = 60 + (video.currentTime / video.duration) * 35
+        onProgress?.(videoProgress)
+
+        requestAnimationFrame(captureFrame)
+      }
+
+      video.addEventListener('ended', () => {
+        recorder.stop()
+      }, { once: true })
+
+      captureFrame()
+
+    } catch (error) {
+      reject(error)
+    }
+  })
+}
+
+/**
+ * Load an image from URL
+ */
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous' // Enable CORS for external images
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = url
+  })
+}
