@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-export const runtime = 'edge'
+// Use Node.js runtime for Prisma compatibility
+export const runtime = 'nodejs'
 
 export async function GET(
   request: Request,
