@@ -15,6 +15,39 @@ export function isHeicFile(file: File): boolean {
   )
 }
 
+/**
+ * Check video duration
+ * @param file - Video file
+ * @returns Promise with duration in seconds
+ */
+export async function getVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.muted = true
+
+    const objectUrl = URL.createObjectURL(file)
+    video.src = objectUrl
+
+    const timeout = setTimeout(() => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Video loading timeout'))
+    }, 10000)
+
+    video.addEventListener('loadedmetadata', () => {
+      clearTimeout(timeout)
+      URL.revokeObjectURL(objectUrl)
+      resolve(video.duration)
+    }, { once: true })
+
+    video.addEventListener('error', () => {
+      clearTimeout(timeout)
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Failed to load video'))
+    }, { once: true })
+  })
+}
+
 export interface VideoMetadata {
   width: number
   height: number

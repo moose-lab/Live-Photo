@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { UploadButton } from '@/components/upload/upload-button'
 import { FirstFramePreview } from '@/components/preview/first-frame-preview'
-import { extractFirstFrame, isHeicFile, composeVideoWithDoodleCover, type VideoMetadata } from '@/lib/video-utils'
+import { extractFirstFrame, isHeicFile, composeVideoWithDoodleCover, getVideoDuration, type VideoMetadata } from '@/lib/video-utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { canMakeApiCall, incrementApiCallCount, getRemainingCalls, getDailyLimit } from '@/lib/api-limits'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
 
 export default function Home() {
   // Local frame extraction state
@@ -41,8 +43,16 @@ export default function Home() {
         return
       }
 
-      // Standard video files: extract frame locally
+      // Check video duration limit (5 seconds)
       setIsExtracting(true)
+      const duration = await getVideoDuration(file)
+
+      if (duration > 5) {
+        setExtractError(`视频时长超过限制！当前时长：${duration.toFixed(1)}秒，最大允许：5秒。请使用更短的视频。`)
+        setIsExtracting(false)
+        setSelectedFile(null)
+        return
+      }
 
       // Extract first frame locally - show immediately in left preview
       const result = await extractFirstFrame(file)
@@ -109,6 +119,15 @@ export default function Home() {
       return
     }
 
+    // Check API call limit
+    if (!canMakeApiCall()) {
+      alert(`今日 AI 转绘次数已用完！\n\n每日限制：${getDailyLimit()} 次\n剩余次数：0 次\n\n请明天再试，或联系管理员提升额度。`)
+      return
+    }
+
+    const remaining = getRemainingCalls()
+    console.log(`API calls remaining today: ${remaining}/${getDailyLimit()}`)
+
     try {
       setIsStylizing(true)
       setStylizeProgress(0)
@@ -130,6 +149,10 @@ export default function Home() {
 
       const data = await response.json()
       const { requestId, status, resultUrl } = data
+
+      // Increment API call counter (task submitted successfully)
+      incrementApiCallCount()
+      console.log(`API call logged. Remaining: ${getRemainingCalls()}/${getDailyLimit()}`)
 
       // Check if task completed immediately
       if (status === 'completed' && resultUrl) {
@@ -451,22 +474,173 @@ export default function Home() {
             </div>
           )}
 
-          {/* Info Section */}
-          <Card className="border-dashed">
-            <CardHeader>
-              <CardTitle className="text-lg">How it works</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>1. 📱 Upload your video (MP4, MOV, WebM - max 500MB)</p>
-              <p>2. 🎨 Browser extracts first frame locally (instant preview)</p>
-              <p>3. ✨ Click "开始Doodle转绘" to stylize with nano-banana-pro AI</p>
-              <p>4. 📥 Download doodle-style cover OR 🎬 compose video</p>
-              <p>5. 🎥 Composed video starts with doodle cover → transitions to live footage</p>
-              <p>6. 📱 Share on 小红书/TikTok/Instagram with eye-catching opening</p>
-              <p className="text-xs italic mt-2">✓ Powered by Wavespeed AI nano-banana-pro model</p>
-              <p className="text-xs italic">✓ Video composition runs locally in your browser (free & private)</p>
-            </CardContent>
-          </Card>
+          {/* Usage Flow & Limitations */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left Card: Usage Flow */}
+            <Card className="border-2 border-purple-200 dark:border-purple-800">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-purple-600" />
+                  使用流程
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 pt-6">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-600 font-bold text-sm">
+                    1
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">上传视频</p>
+                    <p className="text-sm text-muted-foreground">支持 MP4、MOV、WebM 格式</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-600 font-bold text-sm">
+                    2
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">提取第一帧</p>
+                    <p className="text-sm text-muted-foreground">浏览器自动提取并预览</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900 flex items-center justify-center text-pink-600 font-bold text-sm">
+                    3
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">AI 涂鸦转绘</p>
+                    <p className="text-sm text-muted-foreground">点击"开始Doodle转绘"生成封面</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900 flex items-center justify-center text-pink-600 font-bold text-sm">
+                    4
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">下载或合成</p>
+                    <p className="text-sm text-muted-foreground">下载封面图片或合成到视频</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-orange-600 font-bold text-sm">
+                    5
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">视频合成（可选）</p>
+                    <p className="text-sm text-muted-foreground">创建涂鸦→实况的过渡效果</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-orange-600 font-bold text-sm">
+                    6
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">分享发布</p>
+                    <p className="text-sm text-muted-foreground">发布到小红书/TikTok/Instagram</p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t space-y-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    由 Wavespeed AI nano-banana-pro 模型驱动
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    视频合成在浏览器本地运行（免费且私密）
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Right Card: Limitations */}
+            <Card className="border-2 border-orange-200 dark:border-orange-800">
+              <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950">
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-orange-600" />
+                  使用限制
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-6">
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">视频时长限制</p>
+                      <p className="text-sm text-muted-foreground">
+                        最大允许 <span className="font-bold text-orange-600">5 秒</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        超过 5 秒的视频将被拒绝上传。建议使用短视频或剪辑关键片段。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px bg-border" />
+
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">AI 转绘次数限制</p>
+                      <p className="text-sm text-muted-foreground">
+                        每天最多 <span className="font-bold text-orange-600">{getDailyLimit()} 次</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        当前剩余：<span className="font-bold text-green-600">{getRemainingCalls()}</span> 次
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        每天 0:00 自动重置。限制基于浏览器本地存储。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px bg-border" />
+
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">视频格式限制</p>
+                      <p className="text-sm text-muted-foreground">
+                        合成视频输出为 <span className="font-bold">WebM</span> 格式
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        如需 MP4 格式，可使用在线转换工具（如 CloudConvert）进行转换。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px bg-border" />
+
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">处理时间</p>
+                      <p className="text-sm text-muted-foreground">
+                        AI 转绘：约 20-30 秒
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        视频合成：取决于视频长度和设备性能
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        建议在性能较好的设备上使用，并确保稳定的网络连接。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
     </div>
