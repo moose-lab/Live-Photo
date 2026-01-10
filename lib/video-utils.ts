@@ -200,6 +200,13 @@ export function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+export interface ComposedVideoResult {
+  blob: Blob
+  mimeType: string
+  extension: string
+  codecName: string
+}
+
 /**
  * Compose video with doodle cover as first frame
  * Creates a video that starts with doodle cover and transitions to original video
@@ -208,14 +215,14 @@ export function formatDuration(seconds: number): string {
  * @param doodleCoverUrl - URL of the doodle-style cover image
  * @param coverDuration - Duration to display cover in seconds (default: 1.5s)
  * @param onProgress - Progress callback (0-100)
- * @returns Promise with composed video blob
+ * @returns Promise with composed video blob and format info
  */
 export async function composeVideoWithDoodleCover(
   videoFile: File,
   doodleCoverUrl: string,
   coverDuration: number = 1.5,
   onProgress?: (progress: number) => void
-): Promise<Blob> {
+): Promise<ComposedVideoResult> {
   return new Promise(async (resolve, reject) => {
     try {
       onProgress?.(5)
@@ -227,7 +234,7 @@ export async function composeVideoWithDoodleCover(
       // Create video element for original video
       const video = document.createElement('video')
       video.src = URL.createObjectURL(videoFile)
-      video.muted = true
+      video.muted = false // Keep audio enabled
       video.playsInline = true
 
       // Wait for video to load
@@ -252,10 +259,27 @@ export async function composeVideoWithDoodleCover(
         throw new Error('Could not get canvas context')
       }
 
-      // Create MediaRecorder for output
-      const stream = canvas.captureStream(fps)
-      const recorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9',
+      // Detect best supported codec
+      const codec = getBestSupportedVideoCodec()
+
+      // Create MediaRecorder for output with audio
+      const videoStream = canvas.captureStream(fps)
+
+      // Capture audio from the original video
+      const audioContext = new AudioContext()
+      const sourceNode = audioContext.createMediaElementSource(video)
+      const destinationNode = audioContext.createMediaStreamDestination()
+      sourceNode.connect(destinationNode)
+      sourceNode.connect(audioContext.destination) // Also play audio through speakers
+
+      // Combine video and audio streams
+      const combinedStream = new MediaStream([
+        ...videoStream.getVideoTracks(),
+        ...destinationNode.stream.getAudioTracks()
+      ])
+
+      const recorder = new MediaRecorder(combinedStream, {
+        mimeType: codec.mimeType,
         videoBitsPerSecond: 5000000, // 5 Mbps for good quality
       })
 
@@ -267,14 +291,21 @@ export async function composeVideoWithDoodleCover(
       }
 
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' })
+        const blob = new Blob(chunks, { type: codec.mimeType })
         URL.revokeObjectURL(video.src)
+        audioContext.close() // Clean up audio context
         onProgress?.(100)
-        resolve(blob)
+        resolve({
+          blob,
+          mimeType: codec.mimeType,
+          extension: codec.extension,
+          codecName: codec.name
+        })
       }
 
       recorder.onerror = (e) => {
         URL.revokeObjectURL(video.src)
+        audioContext.close() // Clean up audio context
         reject(new Error('Recording failed'))
       }
 
@@ -377,4 +408,32 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error('Failed to load image'))
     img.src = url
   })
+}
+
+/**
+ * Detect the best supported video codec for MediaRecorder
+ * Returns the MIME type and file extension for the best available codec
+ */
+export function getBestSupportedVideoCodec(): { mimeType: string; extension: string; name: string } {
+  // Priority order of codecs to try
+  const codecs = [
+    { mimeType: 'video/mp4;codecs=h264', extension: 'mp4', name: 'MP4 (H.264)' },
+    { mimeType: 'video/mp4', extension: 'mp4', name: 'MP4' },
+    { mimeType: 'video/webm;codecs=vp9,opus', extension: 'webm', name: 'WebM (VP9)' },
+    { mimeType: 'video/webm;codecs=vp9', extension: 'webm', name: 'WebM (VP9)' },
+    { mimeType: 'video/webm;codecs=vp8,opus', extension: 'webm', name: 'WebM (VP8)' },
+    { mimeType: 'video/webm;codecs=vp8', extension: 'webm', name: 'WebM (VP8)' },
+    { mimeType: 'video/webm', extension: 'webm', name: 'WebM' },
+  ]
+
+  for (const codec of codecs) {
+    if (MediaRecorder.isTypeSupported(codec.mimeType)) {
+      console.log(`Using codec: ${codec.name} (${codec.mimeType})`)
+      return codec
+    }
+  }
+
+  // Fallback to webm if nothing is supported (should never happen in modern browsers)
+  console.warn('No preferred codec supported, falling back to default WebM')
+  return { mimeType: 'video/webm', extension: 'webm', name: 'WebM' }
 }

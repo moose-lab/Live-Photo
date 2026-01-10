@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { UploadButton } from '@/components/upload/upload-button'
 import { FirstFramePreview } from '@/components/preview/first-frame-preview'
-import { extractFirstFrame, isHeicFile, composeVideoWithDoodleCover, getVideoDuration, type VideoMetadata } from '@/lib/video-utils'
+import { extractFirstFrame, isHeicFile, composeVideoWithDoodleCover, getVideoDuration, getBestSupportedVideoCodec, type VideoMetadata, type ComposedVideoResult } from '@/lib/video-utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -26,7 +26,7 @@ export default function Home() {
   // Video composition state
   const [isComposing, setIsComposing] = useState(false)
   const [composeProgress, setComposeProgress] = useState(0)
-  const [composedVideoUrl, setComposedVideoUrl] = useState<string | null>(null)
+  const [composedVideo, setComposedVideo] = useState<{ url: string; result: ComposedVideoResult } | null>(null)
 
   const handleFileSelect = async (file: File) => {
     try {
@@ -76,10 +76,10 @@ export default function Home() {
     setStylizeProgress(0)
     setIsComposing(false)
     setComposeProgress(0)
-    if (composedVideoUrl) {
-      URL.revokeObjectURL(composedVideoUrl)
+    if (composedVideo) {
+      URL.revokeObjectURL(composedVideo.url)
     }
-    setComposedVideoUrl(null)
+    setComposedVideo(null)
   }
 
   const handleComposeVideo = async () => {
@@ -93,7 +93,7 @@ export default function Home() {
       setComposeProgress(0)
 
       // Compose video with doodle cover
-      const composedBlob = await composeVideoWithDoodleCover(
+      const result = await composeVideoWithDoodleCover(
         selectedFile,
         doodleCoverUrl,
         1.5, // 1.5 seconds cover duration
@@ -103,8 +103,8 @@ export default function Home() {
       )
 
       // Create download URL
-      const url = URL.createObjectURL(composedBlob)
-      setComposedVideoUrl(url)
+      const url = URL.createObjectURL(result.blob)
+      setComposedVideo({ url, result })
       setIsComposing(false)
     } catch (error) {
       console.error('Video composition error:', error)
@@ -356,7 +356,7 @@ export default function Home() {
 
 
           {/* Action Buttons */}
-          {doodleCoverUrl && !isComposing && !composedVideoUrl && (
+          {doodleCoverUrl && !isComposing && !composedVideo && (
             <div className="flex flex-col items-center gap-4">
               <div className="flex gap-4">
                 <Button
@@ -418,7 +418,7 @@ export default function Home() {
           )}
 
           {/* Composed Video Preview */}
-          {composedVideoUrl && (
+          {composedVideo && (
             <div className="space-y-6">
               <h2 className="text-3xl font-bold text-center bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
                 ✨ 合成视频已完成！
@@ -428,7 +428,7 @@ export default function Home() {
                 <CardContent className="p-0">
                   <div className="relative aspect-video max-w-2xl mx-auto bg-black">
                     <video
-                      src={composedVideoUrl}
+                      src={composedVideo.url}
                       controls
                       className="w-full h-full"
                       playsInline
@@ -453,8 +453,8 @@ export default function Home() {
                 <Button
                   onClick={() => {
                     const link = document.createElement('a')
-                    link.href = composedVideoUrl
-                    link.download = `doodle-live-video-${Date.now()}.webm`
+                    link.href = composedVideo.url
+                    link.download = `doodle-live-video-${Date.now()}.${composedVideo.result.extension}`
                     link.click()
                   }}
                   size="lg"
@@ -467,7 +467,8 @@ export default function Home() {
               <Card className="border-dashed border-orange-300">
                 <CardContent className="py-4">
                   <p className="text-sm text-center text-muted-foreground">
-                    💡 提示：视频格式为 WebM。如需其他格式，可使用视频转换工具（如 CloudConvert）转换为 MP4。
+                    💡 提示：视频格式为 {composedVideo.result.codecName}（{composedVideo.result.extension.toUpperCase()}）。
+                    {composedVideo.result.extension === 'webm' && '如需其他格式，可使用视频转换工具（如 CloudConvert）转换为 MP4。'}
                   </p>
                 </CardContent>
               </Card>
@@ -608,12 +609,15 @@ export default function Home() {
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-orange-700 dark:text-orange-400">视频格式限制</p>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">视频格式说明</p>
                       <p className="text-sm text-muted-foreground">
-                        合成视频输出为 <span className="font-bold">WebM</span> 格式
+                        输出格式：<span className="font-bold">{typeof window !== 'undefined' ? getBestSupportedVideoCodec().extension.toUpperCase() : 'WebM'}</span>（浏览器自动选择最佳编解码器）
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        如需 MP4 格式，可使用在线转换工具（如 CloudConvert）进行转换。
+                        由于浏览器技术限制，MediaRecorder API 主要支持 WebM 格式。MP4 录制需要服务端处理。
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        如需转换为其他格式，可使用在线工具（如 CloudConvert）。
                       </p>
                     </div>
                   </div>
