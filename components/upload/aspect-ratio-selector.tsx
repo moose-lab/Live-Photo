@@ -11,7 +11,7 @@ interface AspectRatioSelectorProps {
 }
 
 const ratioOptions: { value: AspectRatio; label: string; description: string; icon: string }[] = [
-  { value: '1:1', label: 'Square', description: '小红书, Instagram', icon: '⬜' },
+  { value: '1:1', label: 'Square', description: 'Xiaohongshu, Instagram', icon: '⬜' },
   { value: '16:9', label: 'Landscape', description: 'YouTube, Desktop', icon: '▭' },
   { value: '9:16', label: 'Vertical', description: 'TikTok, Stories', icon: '▯' },
 ]

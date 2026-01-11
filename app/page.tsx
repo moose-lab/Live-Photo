@@ -1,16 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { UploadButton } from '@/components/upload/upload-button'
 import { FirstFramePreview } from '@/components/preview/first-frame-preview'
 import { extractFirstFrame, isHeicFile, composeVideoWithDoodleCover, getVideoDuration, getBestSupportedVideoCodec, type VideoMetadata, type ComposedVideoResult } from '@/lib/video-utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { canMakeApiCall, incrementApiCallCount, getRemainingCalls, getDailyLimit } from '@/lib/api-limits'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 
 export default function Home() {
+  // Global rate limit state (fetched from backend)
+  const [limitStatus, setLimitStatus] = useState<{ remaining: number; limit: number; used: number } | null>(null)
+
   // Local frame extraction state
   const [extractedFrame, setExtractedFrame] = useState<string | null>(null)
   const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | null>(null)
@@ -27,6 +29,23 @@ export default function Home() {
   const [isComposing, setIsComposing] = useState(false)
   const [composeProgress, setComposeProgress] = useState(0)
   const [composedVideo, setComposedVideo] = useState<{ url: string; result: ComposedVideoResult } | null>(null)
+
+  // Fetch global rate limit status on mount and after each stylization
+  useEffect(() => {
+    fetchLimitStatus()
+  }, [])
+
+  const fetchLimitStatus = async () => {
+    try {
+      const response = await fetch('/api/limit-status')
+      const data = await response.json()
+      setLimitStatus(data)
+    } catch (error) {
+      console.error('Failed to fetch limit status:', error)
+      // Set fallback values
+      setLimitStatus({ remaining: 100, limit: 100, used: 0 })
+    }
+  }
 
   const handleFileSelect = async (file: File) => {
     try {
@@ -119,15 +138,6 @@ export default function Home() {
       return
     }
 
-    // Check API call limit
-    if (!canMakeApiCall()) {
-      alert(`Daily limit reached! 🎨\n\nYou've used all ${getDailyLimit()} free creations for today.\n\nCome back tomorrow for more doodle covers!`)
-      return
-    }
-
-    const remaining = getRemainingCalls()
-    console.log(`API calls remaining today: ${remaining}/${getDailyLimit()}`)
-
     try {
       setIsStylizing(true)
       setStylizeProgress(0)
@@ -143,6 +153,16 @@ export default function Home() {
         }),
       })
 
+      // Handle rate limit error (429) from backend
+      if (response.status === 429) {
+        const errorData = await response.json()
+        alert(`Global daily limit reached! 🎨\n\n${errorData.message}\n\nThe service has a shared limit of 100 doodle covers per day across all users.\n\nPlease try again tomorrow!`)
+        setIsStylizing(false)
+        // Refresh limit status
+        await fetchLimitStatus()
+        return
+      }
+
       if (!response.ok) {
         throw new Error('Failed to submit stylization task')
       }
@@ -150,9 +170,8 @@ export default function Home() {
       const data = await response.json()
       const { requestId, status, resultUrl } = data
 
-      // Increment API call counter (task submitted successfully)
-      incrementApiCallCount()
-      console.log(`API call logged. Remaining: ${getRemainingCalls()}/${getDailyLimit()}`)
+      // Refresh limit status after successful submission
+      await fetchLimitStatus()
 
       // Check if task completed immediately
       if (status === 'completed' && resultUrl) {
@@ -570,15 +589,15 @@ export default function Home() {
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-orange-700 dark:text-orange-400">Daily Limit</p>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">Usage Limit</p>
                       <p className="text-sm text-muted-foreground">
-                        Generate up to <span className="font-bold text-orange-600">{getDailyLimit()} animated live photos</span> per day
+                        Free tier: <span className="font-bold text-orange-600">{limitStatus?.limit ?? 100} doodle covers</span> per day (shared globally)
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Remaining today: <span className="font-bold text-green-600">{getRemainingCalls()}</span>
+                        Available now: <span className="font-bold text-green-600">{limitStatus?.remaining ?? '...'}</span> • Used today: <span className="font-bold text-purple-600">{limitStatus?.used ?? '...'}</span>
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Resets at midnight • 100% free!
+                        Resets daily at midnight UTC
                       </p>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { put } from '@vercel/blob'
 import { submitStylizeTask } from '@/lib/wavespeed'
+import { canMakeApiCall, incrementApiCallCount, getRemainingCalls } from '@/lib/api-limits-kv'
 
 /**
  * POST /api/stylize
@@ -24,6 +25,20 @@ import { submitStylizeTask } from '@/lib/wavespeed'
  */
 export async function POST(request: Request) {
   try {
+    // Check global rate limit FIRST
+    const canProceed = await canMakeApiCall()
+    if (!canProceed) {
+      const remaining = await getRemainingCalls()
+      return NextResponse.json(
+        {
+          error: 'Global daily limit reached',
+          message: 'The service has reached its daily limit of 100 API calls. Please try again tomorrow.',
+          remaining,
+        },
+        { status: 429 } // Too Many Requests
+      )
+    }
+
     const { frameDataUrl, fileName = 'frame.jpg' } = await request.json()
 
     if (!frameDataUrl) {
@@ -61,6 +76,11 @@ export async function POST(request: Request) {
 
     console.log('Stylization task submitted:', taskResponse.requestId)
     console.log('Task status:', taskResponse.status)
+
+    // Increment global API call counter (task submitted successfully)
+    await incrementApiCallCount()
+    const remaining = await getRemainingCalls()
+    console.log(`Global API call logged. Remaining: ${remaining}`)
 
     // Check if task completed immediately
     if (taskResponse.status === 'completed' && taskResponse.resultUrl) {

@@ -20,7 +20,7 @@ export function FirstFramePreview({
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <span className="text-2xl">📹</span>
-          首帧提取
+          Original Frame
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -39,22 +39,22 @@ export function FirstFramePreview({
         {/* Metadata */}
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-            <div className="text-muted-foreground text-xs">尺寸</div>
+            <div className="text-muted-foreground text-xs">Size</div>
             <div className="font-medium">
               {metadata.width} × {metadata.height}
             </div>
           </div>
           <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-            <div className="text-muted-foreground text-xs">比例</div>
+            <div className="text-muted-foreground text-xs">Ratio</div>
             <div className="font-medium">{metadata.aspectRatio}</div>
           </div>
           <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-            <div className="text-muted-foreground text-xs">时长</div>
+            <div className="text-muted-foreground text-xs">Duration</div>
             <div className="font-medium">{formatDuration(metadata.duration)}</div>
           </div>
           <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-            <div className="text-muted-foreground text-xs">状态</div>
-            <div className="font-medium text-green-600">✓ 已提取</div>
+            <div className="text-muted-foreground text-xs">Status</div>
+            <div className="font-medium text-green-600">✓ Ready</div>
           </div>
         </div>
 

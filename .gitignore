@@ -45,3 +45,4 @@ _bmad/
 _bmad-output/
 .claude/
 .cursor/
+.env*.local
