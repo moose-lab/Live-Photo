@@ -222,11 +222,11 @@ export default function Home() {
               ✨ Live-Photo
             </h1>
             <p className="text-xl text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
-              Turn your videos into <span className="font-semibold text-purple-600">stunning doodle covers</span> in seconds.
-              Perfect for social media! 🎨📱
+              Create <span className="font-semibold text-purple-600">doodle-style animated live photos</span> from your videos.
+              AI-powered cover-to-video transitions! 🎨📱
             </p>
             <p className="text-sm text-purple-600 font-medium">
-              ✓ AI-Powered • Free • Instant Results
+              ✓ Doodle Cover Generation • Video Composition • 100% Free
             </p>
           </div>
 
@@ -234,9 +234,9 @@ export default function Home() {
           {!extractedFrame && !isExtracting && (
             <Card>
               <CardHeader>
-                <CardTitle>Upload Your Video</CardTitle>
+                <CardTitle>Step 1: Upload Your Video</CardTitle>
                 <CardDescription>
-                  Supported formats: MP4, MOV, WebM - max 500MB. AI will match your video's aspect ratio automatically.
+                  Upload your video to create a doodle-style animated live photo. Supports MP4, MOV, WebM (max 5s, 500MB).
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center py-8">
@@ -272,7 +272,7 @@ export default function Home() {
           {extractedFrame && videoMetadata && (
             <div className="space-y-4">
               <h2 className="text-2xl font-bold text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Your Cover Preview
+                Step 2: Create Doodle Cover
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -288,7 +288,7 @@ export default function Home() {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <span className="text-2xl">🎨</span>
-                      Doodle Cover
+                      AI Doodle Cover
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -336,15 +336,15 @@ export default function Home() {
                     ) : (
                       <div className="flex flex-col items-center justify-center min-h-[300px] space-y-4">
                         <div className="text-4xl">⏳</div>
-                        <p className="text-muted-foreground">Ready to transform your video?</p>
+                        <p className="text-muted-foreground">Generate your doodle-style cover first</p>
                         <button
                           onClick={handleStylize}
                           className="py-3 px-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transition-all"
                         >
-                          🎨 Create Doodle Cover
+                          🎨 Generate Doodle Cover
                         </button>
                         <p className="text-xs text-muted-foreground">
-                          Powered by AI • Takes ~15 seconds
+                          AI-powered • ~15 seconds
                         </p>
                       </div>
                     )}
@@ -384,10 +384,10 @@ export default function Home() {
                 size="lg"
                 className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
               >
-                🎬 Create Video with Cover
+                🎬 Step 3: Create Animated Live Photo
               </Button>
               <p className="text-sm text-muted-foreground text-center">
-                Combine your doodle cover with the original video for a stunning reveal effect
+                Compose doodle cover + video into an animated live photo with smooth transition
               </p>
             </div>
           )}
@@ -398,19 +398,19 @@ export default function Home() {
               <CardContent className="py-12">
                 <div className="text-center space-y-4">
                   <div className="text-6xl animate-bounce">🎬</div>
-                  <p className="text-xl font-semibold">Creating Your Video...</p>
+                  <p className="text-xl font-semibold">Creating Your Animated Live Photo...</p>
                   <div className="w-full max-w-md mx-auto space-y-2">
                     <Progress value={composeProgress} />
                     <p className="text-sm text-muted-foreground">
                       {composeProgress < 30 && 'Loading resources...'}
                       {composeProgress >= 30 && composeProgress < 50 && 'Adding doodle cover...'}
-                      {composeProgress >= 50 && composeProgress < 60 && 'Creating transition...'}
-                      {composeProgress >= 60 && 'Composing video...'}
+                      {composeProgress >= 50 && composeProgress < 60 && 'Creating smooth transition...'}
+                      {composeProgress >= 60 && 'Composing final video...'}
                       {` ${Math.round(composeProgress)}%`}
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    This may take a few minutes depending on your video length
+                    Rendering cover-to-video animation...
                   </p>
                 </div>
               </CardContent>
@@ -421,7 +421,7 @@ export default function Home() {
           {composedVideo && (
             <div className="space-y-6">
               <h2 className="text-3xl font-bold text-center bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                ✨ Your Video is Ready!
+                ✨ Your Animated Live Photo is Ready!
               </h2>
 
               <Card className="overflow-hidden">
@@ -435,9 +435,6 @@ export default function Home() {
                     >
                       Your browser does not support the video tag.
                     </video>
-                    <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                      🎨 Doodle Cover → 📱 Live Video
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -467,8 +464,8 @@ export default function Home() {
               <Card className="border-dashed border-orange-300">
                 <CardContent className="py-4">
                   <p className="text-sm text-center text-muted-foreground">
-                    💡 Your video is ready to share! Format: {composedVideo.result.extension.toUpperCase()}
-                    {composedVideo.result.extension === 'webm' && ' • Use a converter like CloudConvert if you need MP4 format.'}
+                    💡 Your animated live photo is ready! Watch the doodle cover smoothly transition into your video.
+                    {composedVideo.result.extension === 'webm' && ' Format: WebM (use CloudConvert for MP4 if needed).'}
                   </p>
                 </CardContent>
               </Card>
@@ -492,7 +489,7 @@ export default function Home() {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">Upload Your Video</p>
-                    <p className="text-sm text-muted-foreground">Supports MP4, MOV, and WebM formats</p>
+                    <p className="text-sm text-muted-foreground">Choose a short clip (up to 5 seconds)</p>
                   </div>
                 </div>
 
@@ -501,8 +498,8 @@ export default function Home() {
                     2
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">Preview Your Frame</p>
-                    <p className="text-sm text-muted-foreground">Instantly see the first frame</p>
+                    <p className="font-medium">Generate Doodle Cover</p>
+                    <p className="text-sm text-muted-foreground">AI creates artistic doodle-style cover (~15s)</p>
                   </div>
                 </div>
 
@@ -511,49 +508,33 @@ export default function Home() {
                     3
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">Transform with AI</p>
-                    <p className="text-sm text-muted-foreground">Get your doodle cover in ~15 seconds</p>
+                    <p className="font-medium">Create Animated Live Photo</p>
+                    <p className="text-sm text-muted-foreground">Compose cover + video with smooth transition</p>
                   </div>
                 </div>
 
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900 flex items-center justify-center text-pink-600 font-bold text-sm">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-orange-600 font-bold text-sm">
                     4
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">Download or Enhance</p>
-                    <p className="text-sm text-muted-foreground">Save your cover or create a combined video</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-orange-600 font-bold text-sm">
-                    5
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Create Full Video (Optional)</p>
-                    <p className="text-sm text-muted-foreground">Add stunning reveal transition effect</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-orange-600 font-bold text-sm">
-                    6
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Share & Post</p>
-                    <p className="text-sm text-muted-foreground">Ready for TikTok, Instagram, YouTube</p>
+                    <p className="font-medium">Download & Share</p>
+                    <p className="text-sm text-muted-foreground">Post to TikTok, Instagram, or other platforms</p>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t space-y-1">
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
-                    Powered by advanced AI technology
+                    AI-powered doodle-style cover generation
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
-                    100% free • Secure & private processing
+                    Smooth cover-to-video transition animation
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    100% free • Local processing
                   </p>
                 </div>
               </CardContent>
@@ -572,12 +553,12 @@ export default function Home() {
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-orange-700 dark:text-orange-400">Best Results</p>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">Video Length</p>
                       <p className="text-sm text-muted-foreground">
-                        Use videos up to <span className="font-bold text-orange-600">5 seconds</span> for optimal performance
+                        Maximum <span className="font-bold text-orange-600">5 seconds</span> per video
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Short clips work best! Perfect for social media highlights.
+                        Perfect for creating eye-catching animated live photos!
                       </p>
                     </div>
                   </div>
@@ -589,15 +570,15 @@ export default function Home() {
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-orange-700 dark:text-orange-400">Daily Creations</p>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">Daily Limit</p>
                       <p className="text-sm text-muted-foreground">
-                        Create up to <span className="font-bold text-orange-600">{getDailyLimit()} doodle covers</span> per day
+                        Generate up to <span className="font-bold text-orange-600">{getDailyLimit()} animated live photos</span> per day
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Remaining today: <span className="font-bold text-green-600">{getRemainingCalls()}</span>
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Resets daily at midnight • Completely free!
+                        Resets at midnight • 100% free!
                       </p>
                     </div>
                   </div>
@@ -628,13 +609,13 @@ export default function Home() {
                     <div>
                       <p className="font-medium text-orange-700 dark:text-orange-400">Processing Time</p>
                       <p className="text-sm text-muted-foreground">
-                        Cover creation: ~15 seconds ⚡
+                        Doodle cover: ~15 seconds ⚡
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Video composition: Varies by length
+                        Animation composition: 1-3 minutes
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Grab a coffee while we work our magic! ☕
+                        Watch the magic happen in real-time! ✨
                       </p>
                     </div>
                   </div>
