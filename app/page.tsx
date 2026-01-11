@@ -84,7 +84,7 @@ export default function Home() {
 
   const handleComposeVideo = async () => {
     if (!selectedFile || !doodleCoverUrl) {
-      alert('Please create an artistic cover first before composing the video!')
+      alert('Please create a doodle cover first before composing the video!')
       return
     }
 
@@ -121,7 +121,7 @@ export default function Home() {
 
     // Check API call limit
     if (!canMakeApiCall()) {
-      alert(`Daily limit reached! 🎨\n\nYou've used all ${getDailyLimit()} free creations for today.\n\nCome back tomorrow for more artistic covers!`)
+      alert(`Daily limit reached! 🎨\n\nYou've used all ${getDailyLimit()} free creations for today.\n\nCome back tomorrow for more doodle covers!`)
       return
     }
 
@@ -222,7 +222,7 @@ export default function Home() {
               ✨ Live-Photo
             </h1>
             <p className="text-xl text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
-              Turn your videos into <span className="font-semibold text-purple-600">stunning artistic covers</span> in seconds.
+              Turn your videos into <span className="font-semibold text-purple-600">stunning doodle covers</span> in seconds.
               Perfect for social media! 🎨📱
             </p>
             <p className="text-sm text-purple-600 font-medium">
@@ -288,7 +288,7 @@ export default function Home() {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <span className="text-2xl">🎨</span>
-                      Artistic Cover
+                      Doodle Cover
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -315,7 +315,7 @@ export default function Home() {
                     ) : isStylizing ? (
                       <div className="flex flex-col items-center justify-center min-h-[300px] space-y-4">
                         <div className="text-5xl animate-bounce">✨</div>
-                        <p className="text-lg font-semibold">Creating Your Artistic Cover...</p>
+                        <p className="text-lg font-semibold">Creating Your Doodle Cover...</p>
                         {stylizeProgress > 0 && (
                           <div className="w-full max-w-xs">
                             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -341,10 +341,10 @@ export default function Home() {
                           onClick={handleStylize}
                           className="py-3 px-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transition-all"
                         >
-                          🎨 Create Artistic Cover
+                          🎨 Create Doodle Cover
                         </button>
                         <p className="text-xs text-muted-foreground">
-                          Powered by AI • Takes ~30 seconds
+                          Powered by AI • Takes ~15 seconds
                         </p>
                       </div>
                     )}
@@ -376,7 +376,7 @@ export default function Home() {
                   size="lg"
                   className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                 >
-                  Download Cover
+                  Download Doodle Cover
                 </Button>
               </div>
               <Button
@@ -387,7 +387,7 @@ export default function Home() {
                 🎬 Create Video with Cover
               </Button>
               <p className="text-sm text-muted-foreground text-center">
-                Combine your artistic cover with the original video for a stunning reveal effect
+                Combine your doodle cover with the original video for a stunning reveal effect
               </p>
             </div>
           )}
@@ -403,7 +403,7 @@ export default function Home() {
                     <Progress value={composeProgress} />
                     <p className="text-sm text-muted-foreground">
                       {composeProgress < 30 && 'Loading resources...'}
-                      {composeProgress >= 30 && composeProgress < 50 && 'Adding artistic cover...'}
+                      {composeProgress >= 30 && composeProgress < 50 && 'Adding doodle cover...'}
                       {composeProgress >= 50 && composeProgress < 60 && 'Creating transition...'}
                       {composeProgress >= 60 && 'Composing video...'}
                       {` ${Math.round(composeProgress)}%`}
@@ -436,7 +436,7 @@ export default function Home() {
                       Your browser does not support the video tag.
                     </video>
                     <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                      🎨 Artistic Cover → 📱 Live Video
+                      🎨 Doodle Cover → 📱 Live Video
                     </div>
                   </div>
                 </CardContent>
@@ -512,7 +512,7 @@ export default function Home() {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">Transform with AI</p>
-                    <p className="text-sm text-muted-foreground">Get your artistic cover in ~30 seconds</p>
+                    <p className="text-sm text-muted-foreground">Get your doodle cover in ~15 seconds</p>
                   </div>
                 </div>
 
@@ -591,7 +591,7 @@ export default function Home() {
                     <div>
                       <p className="font-medium text-orange-700 dark:text-orange-400">Daily Creations</p>
                       <p className="text-sm text-muted-foreground">
-                        Create up to <span className="font-bold text-orange-600">{getDailyLimit()} artistic covers</span> per day
+                        Create up to <span className="font-bold text-orange-600">{getDailyLimit()} doodle covers</span> per day
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Remaining today: <span className="font-bold text-green-600">{getRemainingCalls()}</span>
@@ -628,7 +628,7 @@ export default function Home() {
                     <div>
                       <p className="font-medium text-orange-700 dark:text-orange-400">Processing Time</p>
                       <p className="text-sm text-muted-foreground">
-                        Cover creation: ~30 seconds ⚡
+                        Cover creation: ~15 seconds ⚡
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Video composition: Varies by length
