@@ -48,7 +48,7 @@ export default function Home() {
       const duration = await getVideoDuration(file)
 
       if (duration > 5) {
-        setExtractError(`视频时长超过限制！当前时长：${duration.toFixed(1)}秒，最大允许：5秒。请使用更短的视频。`)
+        setExtractError(`Video too long! Duration: ${duration.toFixed(1)}s • Maximum: 5s. Please use a shorter clip for best results.`)
         setIsExtracting(false)
         setSelectedFile(null)
         return
@@ -84,7 +84,7 @@ export default function Home() {
 
   const handleComposeVideo = async () => {
     if (!selectedFile || !doodleCoverUrl) {
-      alert('需要原始视频和涂鸦封面')
+      alert('Please create an artistic cover first before composing the video!')
       return
     }
 
@@ -109,19 +109,19 @@ export default function Home() {
     } catch (error) {
       console.error('Video composition error:', error)
       setIsComposing(false)
-      alert(error instanceof Error ? error.message : '视频合成失败')
+      alert(error instanceof Error ? error.message : 'Oops! Video creation failed. Please try again.')
     }
   }
 
   const handleStylize = async () => {
     if (!extractedFrame) {
-      alert('No frame extracted yet')
+      alert('Please upload a video first!')
       return
     }
 
     // Check API call limit
     if (!canMakeApiCall()) {
-      alert(`今日 AI 转绘次数已用完！\n\n每日限制：${getDailyLimit()} 次\n剩余次数：0 次\n\n请明天再试，或联系管理员提升额度。`)
+      alert(`Daily limit reached! 🎨\n\nYou've used all ${getDailyLimit()} free creations for today.\n\nCome back tomorrow for more artistic covers!`)
       return
     }
 
@@ -184,7 +184,7 @@ export default function Home() {
           console.error('Poll error:', pollError)
           clearInterval(pollInterval)
           setIsStylizing(false)
-          alert('Failed to get stylization result')
+          alert('Oops! Something went wrong. Please try creating your cover again.')
         }
       }, 3000) // Poll every 3 seconds
 
@@ -193,14 +193,14 @@ export default function Home() {
         clearInterval(pollInterval)
         if (isStylizing) {
           setIsStylizing(false)
-          alert('Stylization timeout')
+          alert('Taking longer than expected! Please try again.')
         }
       }, 180000)
 
     } catch (error) {
       console.error('Stylize error:', error)
       setIsStylizing(false)
-      alert(error instanceof Error ? error.message : 'Stylization failed')
+      alert(error instanceof Error ? error.message : 'Oops! Creation failed. Please try again.')
     }
   }
 
@@ -222,11 +222,11 @@ export default function Home() {
               ✨ Live-Photo
             </h1>
             <p className="text-xl text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
-              Transform your video frames with AI-generated <span className="font-semibold text-purple-600">doodle-style</span> covers.
-              Get eye-catching cover art ready to post! 🎨📱
+              Turn your videos into <span className="font-semibold text-purple-600">stunning artistic covers</span> in seconds.
+              Perfect for social media! 🎨📱
             </p>
             <p className="text-sm text-purple-600 font-medium">
-              ✓ Powered by nano-banana-pro AI
+              ✓ AI-Powered • Free • Instant Results
             </p>
           </div>
 
@@ -272,7 +272,7 @@ export default function Home() {
           {extractedFrame && videoMetadata && (
             <div className="space-y-4">
               <h2 className="text-2xl font-bold text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                封面预览
+                Your Cover Preview
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -288,7 +288,7 @@ export default function Home() {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <span className="text-2xl">🎨</span>
-                      Doodle风格封面
+                      Artistic Cover
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -309,13 +309,13 @@ export default function Home() {
                           disabled={isStylizing}
                           className="w-full py-2 px-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-semibold disabled:opacity-50"
                         >
-                          重新转绘
+                          Generate New Style
                         </button>
                       </>
                     ) : isStylizing ? (
                       <div className="flex flex-col items-center justify-center min-h-[300px] space-y-4">
                         <div className="text-5xl animate-bounce">✨</div>
-                        <p className="text-lg font-semibold">AI转绘中...</p>
+                        <p className="text-lg font-semibold">Creating Your Artistic Cover...</p>
                         {stylizeProgress > 0 && (
                           <div className="w-full max-w-xs">
                             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -330,21 +330,21 @@ export default function Home() {
                           </div>
                         )}
                         <p className="text-sm text-muted-foreground">
-                          Wavespeed nano-banana-pro 处理中...
+                          AI magic in progress...
                         </p>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center min-h-[300px] space-y-4">
                         <div className="text-4xl">⏳</div>
-                        <p className="text-muted-foreground">点击下方按钮开始转绘</p>
+                        <p className="text-muted-foreground">Ready to transform your video?</p>
                         <button
                           onClick={handleStylize}
                           className="py-3 px-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transition-all"
                         >
-                          🎨 开始Doodle转绘
+                          🎨 Create Artistic Cover
                         </button>
                         <p className="text-xs text-muted-foreground">
-                          使用 nano-banana-pro 模型
+                          Powered by AI • Takes ~30 seconds
                         </p>
                       </div>
                     )}
@@ -384,10 +384,10 @@ export default function Home() {
                 size="lg"
                 className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
               >
-                🎬 合成视频（封面+实况）
+                🎬 Create Video with Cover
               </Button>
               <p className="text-sm text-muted-foreground text-center">
-                将涂鸦封面合成到视频开头，创建封面到实况的过渡效果
+                Combine your artistic cover with the original video for a stunning reveal effect
               </p>
             </div>
           )}
@@ -398,19 +398,19 @@ export default function Home() {
               <CardContent className="py-12">
                 <div className="text-center space-y-4">
                   <div className="text-6xl animate-bounce">🎬</div>
-                  <p className="text-xl font-semibold">正在合成视频...</p>
+                  <p className="text-xl font-semibold">Creating Your Video...</p>
                   <div className="w-full max-w-md mx-auto space-y-2">
                     <Progress value={composeProgress} />
                     <p className="text-sm text-muted-foreground">
-                      {composeProgress < 30 && '加载资源...'}
-                      {composeProgress >= 30 && composeProgress < 50 && '添加涂鸦封面...'}
-                      {composeProgress >= 50 && composeProgress < 60 && '创建过渡效果...'}
-                      {composeProgress >= 60 && '合成视频中...'}
+                      {composeProgress < 30 && 'Loading resources...'}
+                      {composeProgress >= 30 && composeProgress < 50 && 'Adding artistic cover...'}
+                      {composeProgress >= 50 && composeProgress < 60 && 'Creating transition...'}
+                      {composeProgress >= 60 && 'Composing video...'}
                       {` ${Math.round(composeProgress)}%`}
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    这可能需要几分钟，取决于视频长度和您的设备性能
+                    This may take a few minutes depending on your video length
                   </p>
                 </div>
               </CardContent>
@@ -421,7 +421,7 @@ export default function Home() {
           {composedVideo && (
             <div className="space-y-6">
               <h2 className="text-3xl font-bold text-center bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                ✨ 合成视频已完成！
+                ✨ Your Video is Ready!
               </h2>
 
               <Card className="overflow-hidden">
@@ -436,7 +436,7 @@ export default function Home() {
                       Your browser does not support the video tag.
                     </video>
                     <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                      🎨 涂鸦封面 → 📱 实况视频
+                      🎨 Artistic Cover → 📱 Live Video
                     </div>
                   </div>
                 </CardContent>
@@ -448,27 +448,27 @@ export default function Home() {
                   variant="outline"
                   size="lg"
                 >
-                  重新开始
+                  Create Another
                 </Button>
                 <Button
                   onClick={() => {
                     const link = document.createElement('a')
                     link.href = composedVideo.url
-                    link.download = `doodle-live-video-${Date.now()}.${composedVideo.result.extension}`
+                    link.download = `artistic-video-${Date.now()}.${composedVideo.result.extension}`
                     link.click()
                   }}
                   size="lg"
                   className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
                 >
-                  📥 下载合成视频
+                  📥 Download Video
                 </Button>
               </div>
 
               <Card className="border-dashed border-orange-300">
                 <CardContent className="py-4">
                   <p className="text-sm text-center text-muted-foreground">
-                    💡 提示：视频格式为 {composedVideo.result.codecName}（{composedVideo.result.extension.toUpperCase()}）。
-                    {composedVideo.result.extension === 'webm' && '如需其他格式，可使用视频转换工具（如 CloudConvert）转换为 MP4。'}
+                    💡 Your video is ready to share! Format: {composedVideo.result.extension.toUpperCase()}
+                    {composedVideo.result.extension === 'webm' && ' • Use a converter like CloudConvert if you need MP4 format.'}
                   </p>
                 </CardContent>
               </Card>
@@ -482,7 +482,7 @@ export default function Home() {
               <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-purple-600" />
-                  使用流程
+                  How It Works
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 pt-6">
@@ -491,8 +491,8 @@ export default function Home() {
                     1
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">上传视频</p>
-                    <p className="text-sm text-muted-foreground">支持 MP4、MOV、WebM 格式</p>
+                    <p className="font-medium">Upload Your Video</p>
+                    <p className="text-sm text-muted-foreground">Supports MP4, MOV, and WebM formats</p>
                   </div>
                 </div>
 
@@ -501,8 +501,8 @@ export default function Home() {
                     2
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">提取第一帧</p>
-                    <p className="text-sm text-muted-foreground">浏览器自动提取并预览</p>
+                    <p className="font-medium">Preview Your Frame</p>
+                    <p className="text-sm text-muted-foreground">Instantly see the first frame</p>
                   </div>
                 </div>
 
@@ -511,8 +511,8 @@ export default function Home() {
                     3
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">AI 涂鸦转绘</p>
-                    <p className="text-sm text-muted-foreground">点击"开始Doodle转绘"生成封面</p>
+                    <p className="font-medium">Transform with AI</p>
+                    <p className="text-sm text-muted-foreground">Get your artistic cover in ~30 seconds</p>
                   </div>
                 </div>
 
@@ -521,8 +521,8 @@ export default function Home() {
                     4
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">下载或合成</p>
-                    <p className="text-sm text-muted-foreground">下载封面图片或合成到视频</p>
+                    <p className="font-medium">Download or Enhance</p>
+                    <p className="text-sm text-muted-foreground">Save your cover or create a combined video</p>
                   </div>
                 </div>
 
@@ -531,8 +531,8 @@ export default function Home() {
                     5
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">视频合成（可选）</p>
-                    <p className="text-sm text-muted-foreground">创建涂鸦→实况的过渡效果</p>
+                    <p className="font-medium">Create Full Video (Optional)</p>
+                    <p className="text-sm text-muted-foreground">Add stunning reveal transition effect</p>
                   </div>
                 </div>
 
@@ -541,30 +541,30 @@ export default function Home() {
                     6
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">分享发布</p>
-                    <p className="text-sm text-muted-foreground">发布到小红书/TikTok/Instagram</p>
+                    <p className="font-medium">Share & Post</p>
+                    <p className="text-sm text-muted-foreground">Ready for TikTok, Instagram, YouTube</p>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t space-y-1">
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
-                    由 Wavespeed AI nano-banana-pro 模型驱动
+                    Powered by advanced AI technology
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
-                    视频合成在浏览器本地运行（免费且私密）
+                    100% free • Secure & private processing
                   </p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Right Card: Limitations */}
+            {/* Right Card: Quick Tips */}
             <Card className="border-2 border-orange-200 dark:border-orange-800">
               <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950">
                 <CardTitle className="flex items-center gap-2">
                   <AlertCircle className="h-5 w-5 text-orange-600" />
-                  使用限制
+                  Quick Tips
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 pt-6">
@@ -572,12 +572,12 @@ export default function Home() {
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-orange-700 dark:text-orange-400">视频时长限制</p>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">Best Results</p>
                       <p className="text-sm text-muted-foreground">
-                        最大允许 <span className="font-bold text-orange-600">5 秒</span>
+                        Use videos up to <span className="font-bold text-orange-600">5 seconds</span> for optimal performance
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        超过 5 秒的视频将被拒绝上传。建议使用短视频或剪辑关键片段。
+                        Short clips work best! Perfect for social media highlights.
                       </p>
                     </div>
                   </div>
@@ -589,15 +589,15 @@ export default function Home() {
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-orange-700 dark:text-orange-400">AI 转绘次数限制</p>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">Daily Creations</p>
                       <p className="text-sm text-muted-foreground">
-                        每天最多 <span className="font-bold text-orange-600">{getDailyLimit()} 次</span>
+                        Create up to <span className="font-bold text-orange-600">{getDailyLimit()} artistic covers</span> per day
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        当前剩余：<span className="font-bold text-green-600">{getRemainingCalls()}</span> 次
+                        Remaining today: <span className="font-bold text-green-600">{getRemainingCalls()}</span>
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        每天 0:00 自动重置。限制基于浏览器本地存储。
+                        Resets daily at midnight • Completely free!
                       </p>
                     </div>
                   </div>
@@ -609,15 +609,12 @@ export default function Home() {
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-orange-700 dark:text-orange-400">视频格式说明</p>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">Video Format</p>
                       <p className="text-sm text-muted-foreground">
-                        输出格式：<span className="font-bold">{typeof window !== 'undefined' ? getBestSupportedVideoCodec().extension.toUpperCase() : 'WebM'}</span>（浏览器自动选择最佳编解码器）
+                        Downloads in <span className="font-bold">{typeof window !== 'undefined' ? getBestSupportedVideoCodec().extension.toUpperCase() : 'WebM'}</span> format (works everywhere!)
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        由于浏览器技术限制，MediaRecorder API 主要支持 WebM 格式。MP4 录制需要服务端处理。
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        如需转换为其他格式，可使用在线工具（如 CloudConvert）。
+                        Need MP4? Use a free converter like CloudConvert.
                       </p>
                     </div>
                   </div>
@@ -629,15 +626,15 @@ export default function Home() {
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-orange-700 dark:text-orange-400">处理时间</p>
+                      <p className="font-medium text-orange-700 dark:text-orange-400">Processing Time</p>
                       <p className="text-sm text-muted-foreground">
-                        AI 转绘：约 20-30 秒
+                        Cover creation: ~30 seconds ⚡
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        视频合成：取决于视频长度和设备性能
+                        Video composition: Varies by length
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        建议在性能较好的设备上使用，并确保稳定的网络连接。
+                        Grab a coffee while we work our magic! ☕
                       </p>
                     </div>
                   </div>

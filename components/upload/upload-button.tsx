@@ -51,7 +51,7 @@ export function UploadButton({ onFileSelect, disabled }: UploadButtonProps) {
       if (file.type.startsWith('video/')) {
         onFileSelect(file)
       } else {
-        alert('请上传视频文件 (MP4, MOV, 或 WebM)')
+        alert('Please upload a video file (MP4, MOV, or WebM)')
       }
     }
   }
@@ -94,10 +94,10 @@ export function UploadButton({ onFileSelect, disabled }: UploadButtonProps) {
           </div>
           <div className="text-center">
             <p className="text-lg font-semibold mb-1">
-              {isDragging ? '松开鼠标上传视频' : '点击或拖拽视频到这里'}
+              {isDragging ? 'Drop to Upload' : 'Click or Drag Video Here'}
             </p>
             <p className="text-sm text-muted-foreground">
-              支持 MP4, MOV, WebM 格式
+              Supports MP4, MOV, WebM formats
             </p>
           </div>
         </div>
